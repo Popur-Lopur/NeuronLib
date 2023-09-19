@@ -90,11 +90,10 @@ public:
     };
 
     void GetDataFromFile(QString filename);
-    void GetTrainDataFromFile(QString filename_train);
     QList<CsvLine> m_data_list;
     QList<CsvLineTrain> m_data_train_list;
-    void  SaveDataWeights (QString filename, NeuronLib& nn);
     void  LoadDataWeights (QString filename, NeuronLib& nn);
+    void LoadDataStruct (QString filename, int& hid, int& out, double& lr);
 
 
 
