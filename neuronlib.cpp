@@ -169,37 +169,37 @@ void NeuronLib::GetDataFromFile(QString filename)
     }
 }
 
-void NeuronLib::LoadDataStruct(QString filename, int& hid, int& out, double& lr)
+void NeuronLib::LoadDataStruct(QString filename,int& inp, int& hid, int& out, double& lr)
 {
     QFile file(filename);
 
+       if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+       {
+           QTextStream in(&file);
+           while(!in.atEnd()) {
+               QString line = in.readLine();
+               QStringList parts = line.split(" ");
 
+               if(parts[0] == "ApplyInputSize") {
+                   inp = parts[1].toInt();
+               }
+               else if(parts[0] == "ApplyHiddenSize") {
+                   hid = parts[1].toInt();
+               }
+               else if(parts[0] == "ApplyOutputSize") {
+                   out = parts[1].toInt();
+               }
+               else if(parts[0] == "ApplyLearningRate") {
+                   lr = parts[1].toDouble();
+               }
+           }
 
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text))
-    {
-        QByteArray jsonData = file.readAll();
-        file.close();
-
-        QJsonDocument doc = QJsonDocument::fromJson(jsonData);
-        if (!doc.isNull()) {
-            QJsonObject rootObject = doc.object();
-
-            if (rootObject.contains("ApplyHiddenSize") && rootObject.contains("ApplyOutputSize") && rootObject.contains("ApplyLearningRate")) {
-                hid = rootObject["ApplyHiddenSize"].toInt();
-                out = rootObject["ApplyOutputSize"].toInt();
-                lr = rootObject["ApplyLearningRate"].toDouble();
-
-            }
-
-            qDebug() << "Struct successfully loaded from:" << filename << endl;
-        }
-        else {
-            qDebug() << "Failed to parse JSON data from:" << filename << endl;
-        }
-    }
-    else {
-        qDebug() << "Struct didn't load from:" << filename << endl;
-    }
+           file.close();
+           qDebug() << "Struct successfully loaded from:" << filename << endl;
+       }
+       else {
+           qDebug() << "Struct didn't load from:" << filename << endl;
+       }
 
 }
 
@@ -208,64 +208,79 @@ void NeuronLib::LoadDataStruct(QString filename, int& hid, int& out, double& lr)
 
 void NeuronLib::LoadDataWeights(QString filename, NeuronLib& nn)
 {
+    QVector<QString> IHvec;
+    QVector<QString> HOvec;
+    QVector<QString> HBvec;
+    QVector<QString> OBvec;
+
     QFile file(filename);
     if (file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
-        QByteArray jsonData = file.readAll();
+        QTextStream in(&file);
+
+        while (!in.atEnd()) {
+            QString line = in.readLine();
+            if (line.startsWith("Input-Hidden"))
+            {
+                line.remove("Input-Hidden ");
+                IHvec.append(line);
+            }
+            if (line.startsWith("Hidden-Output"))
+            {
+                line.remove("Hidden-Output ");
+                HOvec.append(line);
+            }
+            if (line.startsWith("Hidden Biases"))
+            {
+                line.remove("Hidden Biases ");
+                HBvec.append(line);
+            }
+            if (line.startsWith("Output Biases"))
+            {
+                line.remove("Output Biases ");
+                OBvec.append(line);
+            }
+        }
+
         file.close();
 
-        QJsonDocument doc = QJsonDocument::fromJson(jsonData);
-        if (!doc.isNull()) {
-            QJsonObject rootObject = doc.object();
-
-            // Загрузка матрицы весов между входами и скрытым слоем
-            if (rootObject.contains("InputHiddenWeights")) {
-                QJsonArray inputHiddenWeights = rootObject["InputHiddenWeights"].toArray();
-                for (int i = 0; i < nn.m_InputSize; ++i) {
-                    QJsonArray row = inputHiddenWeights[i].toArray();
-                    for (int j = 0; j < nn.m_HiddenSize; ++j) {
-                        nn.m_InputBetweenHidden_Weights[i][j] = row[j].toDouble();
-
-                    }
-                }
+        for (int i = 0; i < IHvec.size(); ++i)
+        {
+            QStringList values = IHvec[i].split(" ");
+            for (int j = 0; j < values.size(); ++j) {
+                nn.m_InputBetweenHidden_Weights[i][j] = values[j].toDouble();
             }
-
-            // Загрузка матрицы весов между скрытым слоем и выходом
-            if (rootObject.contains("HiddenOutputWeights")) {
-                QJsonArray hiddenOutputWeights = rootObject["HiddenOutputWeights"].toArray();
-                for (int i = 0; i < nn.m_HiddenSize; ++i) {
-                    QJsonArray row = hiddenOutputWeights[i].toArray();
-                    for (int j = 0; j < nn.m_OutputSize; ++j) {
-                        nn.m_HiddenBetweenOutput_Weights[i][j] = row[j].toDouble();
-                    }
-                }
-            }
-
-            // Загрузка весов скрытого слоя
-            if (rootObject.contains("HiddenBiases")) {
-                QJsonArray hiddenBiases = rootObject["HiddenBiases"].toArray();
-                for (int i = 0; i < nn.m_HiddenSize; ++i) {
-                    nn.m_HiddenBiases[i] = hiddenBiases[i].toDouble();
-                }
-            }
-
-            // Загрузка весов выходного слоя
-            if (rootObject.contains("OutputBiases")) {
-                QJsonArray outputBiases = rootObject["OutputBiases"].toArray();
-                for (int i = 0; i < nn.m_OutputSize; ++i) {
-                    nn.m_OutputBiases[i] = outputBiases[i].toDouble();
-                }
-            }
-
-
-            qDebug() << "Weights successfully loaded from:" << filename << endl;
         }
-        else {
-            qDebug() << "Failed to parse JSON data in:" << filename << endl;
+
+        for (int i = 0; i < HOvec.size(); ++i)
+        {
+            QStringList values = HOvec[i].split(" ");
+            for (int j = 0; j < values.size(); ++j) {
+                nn.m_HiddenBetweenOutput_Weights[i][j] = values[j].toDouble();
+            }
         }
+
+        for (int i = 0; i < HBvec.size(); ++i)
+        {
+            QStringList values = HBvec[i].split(" ");
+            for (int j = 0; j < values.size(); ++j) {
+                nn.m_HiddenBiases[i] = values[j].toDouble();
+            }
+        }
+
+        for (int i = 0; i < OBvec.size(); ++i)
+        {
+            QStringList values = OBvec[i].split(" ");
+            for (int j = 0; j < values.size(); ++j) {
+                nn.m_OutputBiases[i] = values[j].toDouble();
+            }
+        }
+
+        qDebug() << "Weights successful downloaded in:" << filename << endl;
     }
+
     else {
-        qDebug() << "Weights didn't load from:" << filename << endl;
+        qDebug() << "Weights  didn't  downloaded in:" << filename << endl;
     }
 
 }
@@ -276,17 +291,18 @@ void NeuronLib::neuronTest()
     NeuronLib* data_test_csv = new NeuronLib();
     data_test_csv->GetDataFromFile("test.csv");
 
-    int NumberInputs = data_test_csv->m_data_list.at(0).values_in_csvline.size();
+//    int NumberInputs = data_test_csv->m_data_list.at(0).values_in_csvline.size();
 
+    int inp = 0;
     int hid = 0;
     int out = 0;
     double lr = 0.0;
     NeuronLib data = NeuronLib();
-    data.LoadDataStruct("terry.json", hid, out, lr);
+    data.LoadDataStruct("ForLib.txt",inp, hid, out, lr);
 
-    NeuronLib Net = NeuronLib(NumberInputs, hid, out, lr);
+    NeuronLib Net = NeuronLib(inp, hid, out, lr);
 
-    data.LoadDataWeights("terry.json", Net);
+    data.LoadDataWeights("ForLib.txt", Net);
 
 
 

@@ -21,9 +21,7 @@
 #include <QLoggingCategory>
 #include <QDateTime>
 #include <QThread>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
+
 
 #include "neuronlib_global.h"
 
@@ -93,7 +91,7 @@ public:
     QList<CsvLine> m_data_list;
     QList<CsvLineTrain> m_data_train_list;
     void  LoadDataWeights (QString filename, NeuronLib& nn);
-    void LoadDataStruct (QString filename, int& hid, int& out, double& lr);
+    void LoadDataStruct (QString filename,int& inp, int& hid, int& out, double& lr);
 
 
 
